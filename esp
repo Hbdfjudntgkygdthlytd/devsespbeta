@@ -1,44 +1,109 @@
--- Place this script in ServerScriptService
+-- Place this in a LocalScript under StarterPlayerScripts
+local Players = game:GetService("Players")
 
--- Create a function to add a selection box to a player
-local function createSelectionBox(player)
-    -- Wait for the player's character to load
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-
-    -- Create a BillboardGui to act as the selection box
-    local billboardGui = Instance.new("BillboardGui")
-    billboardGui.Adornee = humanoidRootPart  -- Attach the GUI to the HumanoidRootPart
-    billboardGui.Size = UDim2.new(0, 5, 0, 5)  -- Set the size of the GUI
-    billboardGui.StudsOffset = Vector3.new(0, 3, 0)  -- Offset above the player slightly for visibility
-    billboardGui.Parent = workspace  -- Parent the GUI to the workspace
-
-    -- Make the BillboardGui visible through walls by setting it to always render
-    billboardGui.AlwaysOnTop = true
-
-    -- Create the actual red outline for the selection box using frames
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 1, 0)  -- Full size of the BillboardGui
-    frame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)  -- Red color
-    frame.BackgroundTransparency = 0.5  -- Set transparency of the box (adjust if needed)
-    frame.BorderSizePixel = 0  -- Remove any border
-    frame.Parent = billboardGui  -- Parent it to the BillboardGui
-
-    -- Optional: Make the frame a little thicker if you prefer a bolder outline
-    frame.BorderSizePixel = 2
-end
-
--- Listen for when players join
-game.Players.PlayerAdded:Connect(function(player)
-    -- When a player joins, create the selection box
-    player.CharacterAdded:Connect(function()
-        createSelectionBox(player)
-    end)
-end)
-
--- Ensure to create the selection box for players already in the game
-for _, player in ipairs(game.Players:GetPlayers()) do
-    if player.Character then
-        createSelectionBox(player)
+-- Function to create an outline with BoxHandleAdornment
+local function createOutline(character)
+    for _, part in ipairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            -- Check for existing BoxHandleAdornment to prevent duplication
+            if not part:FindFirstChild("OutlineAdornment") then
+                local boxHandle = Instance.new("SelectionBox")
+                boxHandle.Name = "OutlineAdornment"
+                boxHandle.Adornee = part
+                boxHandle.LineThickness = 0.05 -- Adjust the thickness of the outline
+                boxHandle.Color3 = Color3.new(1, 1, 1) -- White color
+                boxHandle.SurfaceTransparency = 1 -- Fully transparent interior (outline only)
+                boxHandle.Parent = part
+            end
+        end
     end
 end
+
+-- Function to create a health display above the player's head
+local function createHealthDisplay(character, player)
+    local head = character:FindFirstChild("Head")
+    if not head then return end
+
+    -- Check for existing BillboardGui to avoid duplication
+    if head:FindFirstChild("HealthDisplay") then return end
+
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "HealthDisplay"
+    billboardGui.Adornee = head
+    billboardGui.Size = UDim2.new(4, 0, 2, 0) -- Larger size for better visibility
+    billboardGui.StudsOffset = Vector3.new(0, 3, 0) -- Position above the head
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Parent = head
+
+    -- Create container frame
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = billboardGui
+
+    -- Create green "Health:" label
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    healthLabel.Position = UDim2.new(0, 0, 0, 0)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.TextScaled = true
+    healthLabel.Font = Enum.Font.SourceSansBold
+    healthLabel.Text = "Health:"
+    healthLabel.TextColor3 = Color3.new(0, 1, 0) -- Green color
+    healthLabel.Parent = container
+
+    -- Create red health value display
+    local healthValue = Instance.new("TextLabel")
+    healthValue.Size = UDim2.new(0.5, 0, 1, 0)
+    healthValue.Position = UDim2.new(0.5, 0, 0, 0)
+    healthValue.BackgroundTransparency = 1
+    healthValue.TextScaled = true
+    healthValue.Font = Enum.Font.SourceSansBold
+    healthValue.TextColor3 = Color3.new(1, 0, 0) -- Red color
+    healthValue.Parent = container
+
+    -- Function to update health dynamically
+    local function updateHealth()
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            local health = humanoid.Health
+            local maxHealth = humanoid.MaxHealth
+            healthValue.Text = string.format("%d/%d", math.floor(health), math.floor(maxHealth))
+        end
+    end
+
+    -- Connect to humanoid's health change
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid:GetPropertyChangedSignal("Health"):Connect(updateHealth)
+    end
+
+    -- Initial health update
+    updateHealth()
+end
+
+-- Function to handle each player's character
+local function handleCharacter(character, player)
+    if character and player then
+        createOutline(character)
+        createHealthDisplay(character, player)
+    end
+end
+
+-- Set up for existing players
+for _, player in ipairs(Players:GetPlayers()) do
+    player.CharacterAdded:Connect(function(character)
+        handleCharacter(character, player)
+    end)
+
+    if player.Character then
+        handleCharacter(player.Character, player)
+    end
+end
+
+-- Handle new players joining
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        handleCharacter(character, player)
+    end)
+end)
