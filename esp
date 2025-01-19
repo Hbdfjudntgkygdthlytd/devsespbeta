@@ -1,0 +1,44 @@
+-- Place this script in ServerScriptService
+
+-- Create a function to add a selection box to a player
+local function createSelectionBox(player)
+    -- Wait for the player's character to load
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+    -- Create a BillboardGui to act as the selection box
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Adornee = humanoidRootPart  -- Attach the GUI to the HumanoidRootPart
+    billboardGui.Size = UDim2.new(0, 5, 0, 5)  -- Set the size of the GUI
+    billboardGui.StudsOffset = Vector3.new(0, 3, 0)  -- Offset above the player slightly for visibility
+    billboardGui.Parent = workspace  -- Parent the GUI to the workspace
+
+    -- Make the BillboardGui visible through walls by setting it to always render
+    billboardGui.AlwaysOnTop = true
+
+    -- Create the actual red outline for the selection box using frames
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)  -- Full size of the BillboardGui
+    frame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)  -- Red color
+    frame.BackgroundTransparency = 0.5  -- Set transparency of the box (adjust if needed)
+    frame.BorderSizePixel = 0  -- Remove any border
+    frame.Parent = billboardGui  -- Parent it to the BillboardGui
+
+    -- Optional: Make the frame a little thicker if you prefer a bolder outline
+    frame.BorderSizePixel = 2
+end
+
+-- Listen for when players join
+game.Players.PlayerAdded:Connect(function(player)
+    -- When a player joins, create the selection box
+    player.CharacterAdded:Connect(function()
+        createSelectionBox(player)
+    end)
+end)
+
+-- Ensure to create the selection box for players already in the game
+for _, player in ipairs(game.Players:GetPlayers()) do
+    if player.Character then
+        createSelectionBox(player)
+    end
+end
